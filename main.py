@@ -1,7 +1,13 @@
 from scipy import misc
 import random
-import numpy
+import numpy as np
+import cv2
 import pickle
+
+N_HIDDEN = 45
+N_OUTPUT = 15
+ITERATIONS = 6000
+ERROR = 0.01
 
 # Classe com as imagens abertas
 # image -> matriz com os valores dos pixels da imagem
@@ -34,161 +40,64 @@ class Images:
         
     def getRealOutput(self,index):
         return self.realOutput[index]
+    
+def Treina_MLP(Mat trainingDataMat, Mat labelsMat):
+    net = np.zeros((1, 3), dtype = "CV_32SC1")
+    net[0][0] = 15      # entrada
+    net[0][1] = N_HIDDEN # camadaOculta
+    net[0][2] = N_OUTPUT # saida
+    
+    
+    params = CvANN_MLP_TrainParams(cvTermCriteria(CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, ITERATIONS, ERROR),
+                                   CvANN_MLP_TrainParams::BACKPROP,  
+                                   0.1,
+                                   0.1)
+    
+    # Treinamento MLP
+    mlp = new CvANN_MLP()
+    mlp.create(net, CvANN_MLP::SIGMOID_SYM, 0.6, 1)
+    mlp.train(trainingDataMat, labelsMat, np.zeros(0), np.zeros(0), params)
+    
+    Mat resp(trainingDataMat.rows, 1, CV_32FC1)
+    
+    mlp->predict(trainingDataMat, resp)
+    
+    errados = 0
+    total = 0
+    predict = 0
+    for i = 0 in xrange(trainingDataMat.rows):
+        {
+            cout << "PM = " << trainingDataMat.at<float>(i,0) << " MI = " << trainingDataMat.at<float>(i,1) << " Label: " << labelsMat.at<float>(i) << " Predict: " << resp.at<float>(i) << " Erro: " << labelsMat.at<float>(i) - resp.at<float>(i) << endl;
+            
+            predict = (int)(resp.at<float>(i) + 0.5);
+            total++;
+            if(predict != (int)(labelsMat.at<float>(i)))  
+            errados++;
+            }
+        cout << "Total: " << total << " Acuracia: " << 100.0 * ((float) (total - errados) / (float) total) << "%" << endl;
+        
+        mlp->save("mlp.xml")
+        
+        return mlp
 
-# Classe com os neuronios de cada camada
-# weights -> pesos de entrada do neuronio
-# output -> saida do neuronio
-# error -> erro calculado
-# v -> soma dos pesos*inputs
-# bias -> valor do bias
-# biasWeight -> peso do bias
-# delta -> delta calculado no Backpropagation
-class Neuron:
-    # Flag: 
-    # 1 - rede nao treinada
-    # 0 - rede treinada
-    def __init__(self,n_weights,flag,fl="teste"):
-        if(flag):
-            self.weights = []
-            self.setWeights(n_weights)
-            self.biasWeight = 1.0
-        else:
-            self.weights = pickle.load(fl)
-            self.biasWeight = pickle.load(fl)
-        self.output = 0.0
-        self.error = 0.0
-        self.v = 0.0
-        self.delta = 0.0
-        self.bias = 1.0
-        
-    # Funcao que define valores arbitrarios entre -1 e 1 para os pesos
-    # n_weights -> numero de pesos
-    def setWeights(self,n_weights):
-        for i in xrange(n_weights):
-            self.weights.append(random.uniform(-1.0, 1.0))
-        
-    # Funcao que calcula v e a saida gerada
-    # x -> entradas
-    # flag -> define se deve ser calculado para a camada escondida ou de saida
-    def weightsCalculation(self,x,flag):
-        self.v = 0.0
-        self.v += self.bias*self.biasWeight
-        if flag:
-            for i in xrange(len(x)):
-                aux = numpy.sum(self.weights[(i*len(x[i])):(((i+1)*len(x[i])))]*x[i])
-                self.v += aux
-        else:
-            for i in xrange(len(x)):
-                self.v += self.weights[i]*x[i].getOutput()
-            
-        self.output = (1 / (1 + numpy.exp(-self.v)));
-        
-    # Funcao que recalcula os pesos para a camada de saida
-    # n -> taxa de aprendizado
-    # inputs -> entradas recebidas da camada escondida
-    def backpropagationOutput(self,n,inputs):
-        self.delta = self.error*((1 / (1 + numpy.exp(-self.v))) * (1 - (1 / (1 + numpy.exp(-self.v)))))
-        for i in xrange(len(inputs)):
-            delta_peso = n*self.delta*inputs[i].getOutput()
-            self.weights[i] += delta_peso
-        
-        self.biasWeight += n*self.delta
-    
-    # Funcaoque recalcula os pesos para a camada escondida
-    # n -> taxa de aprendizado
-    # inputs -> entradas recebidas da imagem
-    # outputLayer -> camada de saida
-    # index -> indice do neuronio na hidden para calculo do somatorio em delta
-    def backpropagationHidden(self,n,inputs,outputLayer,index):
-        sum_of_outputs = 0
-        for i in xrange(len(outputLayer)):
-            sum_of_outputs += outputLayer[i].backpropagationSum(index)
-        
-        self.delta = ((1 / (1 + numpy.exp(-self.v))) * (1 - (1 / (1 + numpy.exp(-self.v)))))*sum_of_outputs
-        for i in xrange(len(inputs)):
-            for j in xrange(len(inputs[0])):
-                delta_peso = n*self.delta*inputs[i][j]
-                self.weights[i*len(inputs[0])+j] += delta_peso
-            
-        self.biasWeight += n*self.delta
-        
-    # Funcao auxiliar para o somatorio do delta da camada escondida
-    def backpropagationSum(self,index):
-        return self.delta*self.weights[index]
-        
-    # Funcao que calcula o erro de saida
-    def errorCalculation(self,training):
-        self.error = training - self.output
-        
-    def getOutput (self):
-        return self.output
-    
-    def getError(self):
-        return self.error
-    
-    def getWeight(self):
-        return self.weights
-    
-    def getBiasWeight(self):
-        return self.biasWeight
-    
-flag = raw_input("Escolha um opcao ([1] Treina a Rede - [2] Classifica uma imagem): ")
-N_HIDDEN = 45
+
+flag = raw_input("Escolha um opcao:\n[1] Treina a Rede\n[2] Classifica uma imagem\n[3]Analisa sequencia de movimentos")
+path_dir = "/home/antonio/Documentos/SensoresInteligentes/Base/test/"
+image = []
 
 if (int(flag) == 1):
-    path_dir = "/home/antonio/Documentos/SensoresInteligentes/Base/test/"
-    image = []
-
     # abre a base de dados
     for k in xrange(15):
         image_file = str(k) + ".jpg"
         fp = Images(misc.imread(path_dir + image_file, flatten=1),k)
         for i in xrange(fp.getImageHeight()):
             for j in xrange(fp.getImageWidth()):
-                if (fp.getImageIndex(i,j) == 255.0):
-                    fp.setImageIndex(i,j,1.0)
+                fp.setImageIndex(i,j,fp.getImageIndex(i,j)/255.0)
         
         image.append(fp)
-        
-    # inicializa as camadas
-    hiddenLayer = []
-    for i in xrange(N_HIDDEN):
-        hiddenLayer.append(Neuron(image[0].getSize(),1))
-        
-    outputLayer = []
-    for i in xrange(15):
-        outputLayer.append(Neuron(N_HIDDEN,1))
 
-    # Taxa de Aprendizado
-    N = 0.9
-    # Threshold
-    error = 0.01
     # Erro calculado
     calculatedError = 1.0
-
-    while (calculatedError >= error):
-        # Para cada imagem
-        calculatedError = 0.0
-        for j in xrange(len(image)):
-            # Forwarding
-            for i in xrange(len(hiddenLayer)):
-                hiddenLayer[i].weightsCalculation(image[j].getImage(),1)
-            
-            for i in xrange(len(outputLayer)):
-                outputLayer[i].weightsCalculation(hiddenLayer,0)
-                outputLayer[i].errorCalculation(image[j].getRealOutput(i))
-                calculatedError += numpy.power(outputLayer[i].getError(),2)
-            
-            #Backpropagation
-            for i in range(len(outputLayer)):
-                outputLayer[i].backpropagationOutput(N,hiddenLayer)
-                
-            for i in range(len(hiddenLayer)):
-                hiddenLayer[i].backpropagationHidden(N,image[j].getImage(),outputLayer,i)
-                
-        
-        calculatedError /= len(image)
-        print(calculatedError)
 
     # salva os pesos treinados em um arquivo
     data_file = "pesos.dat"
@@ -204,12 +113,9 @@ if (int(flag) == 1):
         
     f.close()
 elif(int(flag) == 2):
-    path_dir = "/home/antonio/Documentos/SensoresInteligentes/Base/test/"
-    image = []
-    
     # abre a imagem que vai ser classificada e seleciona o que ela representa
     image_file = raw_input("Digite o nome da imagem: ")
-    print("[Indice da Saida]-Numero correspondente ([0]-0, [1]-7, [2]-1, [3]-3, [4]-9, [5]-5, [6]-6, [7]-2, [8]-4, [9]-8)")
+    print("[Indice da Saida]\n(0 1 2 3 4)\n(5 6 7 8 9)\n(10 11 12 13 14)")
     index = raw_input("Digite o indice da saida esperada: ")
     fp = Images(misc.imread(path_dir + image_file, flatten=1),int(index))
     for i in xrange(fp.getImageHeight()):
@@ -222,13 +128,7 @@ elif(int(flag) == 2):
     # carrega os pesos previamente calculados
     data_file = "pesos.dat"
     f = open(data_file, 'rb+')
-    hiddenLayer = []
-    for i in xrange(N_HIDDEN):
-        hiddenLayer.append(Neuron(image[0].getSize(),0,f))
-        
-    outputLayer = []
-    for i in xrange(15):
-        outputLayer.append(Neuron(N_HIDDEN,0,f))
+
         
     f.close()
         
@@ -237,15 +137,7 @@ elif(int(flag) == 2):
     
     # classifica a imagem
     calculatedError = 0.0
-    for i in xrange(len(hiddenLayer)):
-        hiddenLayer[i].weightsCalculation(image[0].getImage(),1)
-                
-    for i in xrange(len(outputLayer)):
-        outputLayer[i].weightsCalculation(hiddenLayer,0)
-        outputLayer[i].errorCalculation(image[0].getRealOutput(i))
-        calculatedError += numpy.power(outputLayer[i].getError(),2)
-                    
-    calculatedError /= len(image)
+   
     print("Erro: " + str(calculatedError))
     print("O valor mais proximo de 1 eh a classificacao correta: ")
     print("Numero 0: " + str(outputLayer[0].getOutput()))
@@ -263,3 +155,25 @@ elif(int(flag) == 2):
     print("Numero 8: " + str(outputLayer[12].getOutput()))
     print("Numero 8: " + str(outputLayer[13].getOutput()))
     print("Numero 8: " + str(outputLayer[14].getOutput()))
+
+#cap = cv2.VideoCapture(0)
+#count = 0
+
+#while(1):
+  #ret ,frame = cap.read()
+
+  #if ret == True:
+    #cv2.imshow('img2',frame)
+
+    #k = cv2.waitKey(60) & 0xff
+    #if k == 27:
+      #break
+    #elif k == 113:
+      #cv2.imwrite(str(count)+".jpg",frame)
+      #count = count + 1
+
+  #else:
+    #break
+
+#cv2.destroyAllWindows()
+#cap.release()
