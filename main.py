@@ -141,7 +141,7 @@ def Treina_MLP(self,trainingDataMat,labelsMat):
         if(predict != labelsMat[i]):  
             errados = errados + 1
     
-    print("Total: " + str(total) + " Acuracia: " + str(100.0 * ((float) (total - errados) / (float) total)) + "%")
+    print("Total: " + str(total) + " Acuracia: " + str(100.0 * ((total - errados) / total)) + "%")
     
     mlp.save("mlp.xml")
     
@@ -163,22 +163,6 @@ if (int(flag) == 1):
         
         image.append(fp)
 
-    # Erro calculado
-    calculatedError = 1.0
-
-    # salva os pesos treinados em um arquivo
-    data_file = "pesos.dat"
-    f = open(data_file, 'wb+')
-
-    for i in xrange(len(hiddenLayer)):
-        pickle.dump(hiddenLayer[i].getWeight(),f)
-        pickle.dump(hiddenLayer[i].getBiasWeight(),f)
-        
-    for i in xrange(len(outputLayer)):
-        pickle.dump(outputLayer[i].getWeight(),f)
-        pickle.dump(outputLayer[i].getBiasWeight(),f)
-        
-    f.close()
 elif(int(flag) == 2):
     # abre a imagem que vai ser classificada e seleciona o que ela representa
     image_file = raw_input("Digite o nome da imagem: ")
@@ -191,37 +175,8 @@ elif(int(flag) == 2):
                 fp.setImageIndex(i,j,1.0)
                 
     image.append(fp)
-    
-    # carrega os pesos previamente calculados
-    data_file = "pesos.dat"
-    f = open(data_file, 'rb+')
-
-        
-    f.close()
-        
-    # N - Taxa de Aprendizado(constante real positiva)
-    N = 0.3
-    
-    # classifica a imagem
-    calculatedError = 0.0
-   
-    print("Erro: " + str(calculatedError))
-    print("O valor mais proximo de 1 eh a classificacao correta: ")
-    print("Numero 0: " + str(outputLayer[0].getOutput()))
-    print("Numero 7: " + str(outputLayer[1].getOutput()))
-    print("Numero 1: " + str(outputLayer[2].getOutput()))
-    print("Numero 3: " + str(outputLayer[3].getOutput()))
-    print("Numero 9: " + str(outputLayer[4].getOutput()))
-    print("Numero 5: " + str(outputLayer[5].getOutput()))
-    print("Numero 6: " + str(outputLayer[6].getOutput()))
-    print("Numero 2: " + str(outputLayer[7].getOutput()))
-    print("Numero 4: " + str(outputLayer[8].getOutput()))
-    print("Numero 8: " + str(outputLayer[9].getOutput()))
-    print("Numero 8: " + str(outputLayer[10].getOutput()))
-    print("Numero 8: " + str(outputLayer[11].getOutput()))
-    print("Numero 8: " + str(outputLayer[12].getOutput()))
-    print("Numero 8: " + str(outputLayer[13].getOutput()))
-    print("Numero 8: " + str(outputLayer[14].getOutput()))
+elif(int(flag) == 3):
+    print("teste");
 
 #cap = cv2.VideoCapture(0)
 #count = 0
