@@ -1,6 +1,9 @@
 #include <iostream>
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/videoio.hpp>
+#include <opencv2/ml.hpp>
 
 using namespace std;
 using namespace cv;
@@ -24,13 +27,15 @@ void Treina_MLP(Mat trainingDataMat, Mat labelsMat) {
     net.at<int>(0,1) = N_HIDDEN;
     net.at<int>(0,2) = N_OUTPUT;
     // carrega os parametros para o backpropagation
-    CvANN_MLP_TrainParams params = CvANN_MLP_TrainParams(cvTermCriteria(CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, ITERATIONS, ERROR),
-                                                         CvANN_MLP_TrainParams::BACKPROP, 0.1, 0.1);
+    TermCriteria params = TermCriteria(TermCriteria::Type::COUNT + TermCriteria::Type::EPS, ITERATIONS, ERROR);
     
     // cria a MLP com os dados da funcao de ativacao e os parametros definidos anteriormente, salvando apos o treino
-    CvANN_MLP *mlp = new CvANN_MLP();
-    mlp->create(net, CvANN_MLP::SIGMOID_SYM, 0.6, 1);
-    mlp->train(trainingDataMat, labelsMat, Mat(), Mat(), params);
+    cv::Ptr<cv::ml::ANN_MLP> mlp = cv::ml::ANN_MLP::create();
+    mlp->setLayerSizes(net);
+    mlp->setActivationFunction(cv::ml::ANN_MLP::ActivationFunctions::SIGMOID_SYM, 0.6, 1);
+    mlp->setTermCriteria(params);
+    mlp->setTrainMethod(cv::ml::ANN_MLP::TrainingMethods::BACKPROP, 0.1, 0.1);
+    //mlp->train(trainingDataMat, labelsMat, Mat(), Mat(), params);
     mlp->save("mlp.xml");
 }
 
@@ -45,8 +50,7 @@ void Treina_MLP(Mat trainingDataMat, Mat labelsMat) {
  */
 int Testa_MLP(Mat trainingDataMat, Mat labelsMat, int index) {
     // carrega os dados treinados e testa com a base inserida
-    CvANN_MLP *mlp = new CvANN_MLP();
-    mlp->load("mlp.xml");
+    Ptr<cv::ml::ANN_MLP> mlp = Algorithm::load<cv::ml::ANN_MLP>("mlp.xml");
     Mat resp(N_OUTPUT, N_OUTPUT, CV_32FC1);
     mlp->predict(trainingDataMat, resp);
     
@@ -127,7 +131,7 @@ int main(int argc, char **argv) {
     Mat image;
     int flag = 0;
     
-    cout << ("Escolha um opcao:" << endl << "[1] Treina a Rede" << endl "[2] Classifica uma imagem" << endl 
+    cout << "Escolha um opcao:" << endl << "[1] Treina a Rede" << endl << "[2] Classifica uma imagem" << endl 
         << "[3] Analisa sequencia de movimentos" << endl;
     cin >> flag;
     cin.ignore();
@@ -155,11 +159,10 @@ int main(int argc, char **argv) {
         Mat labelsMat = Mat::zeros(1, N_OUTPUT, CV_32FC1);
         Mat trainingDataMat = Mat::zeros(1, N_INPUT, CV_32FC1);
         int index = 0;
-        String image_file;
+        string image_file;
         
         cout << "Digite o nome da imagem:" << endl;
-        cin >> image_file;
-        cin.ignore();
+        getline (cin, image_file);
         cout << "Digite o indice da saida esperada: " << endl;
         cout << "[Indice da Saida]" << endl << "(0 1 2 3 4)" << endl << "(5 6 7 8 9)" << endl << "(10 11 12 13 14)" << endl;
         cin >> index;
@@ -187,7 +190,8 @@ int main(int argc, char **argv) {
             cap >> frame;
             imshow("img2",frame);
             
-            Mat gray = cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            Mat gray;
+            cvtColor(frame, gray, COLOR_BGR2GRAY);
             for (int i = 0; i < (int) cap.get(CV_CAP_PROP_FRAME_HEIGHT); i++) {
                 for (int j = 0; j < (int) cap.get(CV_CAP_PROP_FRAME_WIDTH); j++) {
                     trainingDataMat.at<float>(0,(i*((int)cap.get(CV_CAP_PROP_FRAME_WIDTH)))+j) = frame.at<float>(i,j)/255.0;   
@@ -198,7 +202,7 @@ int main(int argc, char **argv) {
             CompareResult(actualResult,lastResult);
             lastResult = actualResult;
             
-            if (waitkey(30) >= 0)
+            if(waitKey(30) >= 0)
                 break;
         }
     }
