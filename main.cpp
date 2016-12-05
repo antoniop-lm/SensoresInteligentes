@@ -9,10 +9,10 @@ using namespace std;
 using namespace cv;
 
 #define N_INPUT 307200  // numero de neuronios na input layer
-#define N_HIDDEN 45     // numero de neuronios na hidden layer
+#define N_HIDDEN 100     // numero de neuronios na hidden layer
 #define N_OUTPUT 15     // numero de neuronios na output layer
 #define ITERATIONS 6000 // numero maximo de iteracoes
-#define ERROR 0.01      // erro minimo - threshold
+#define ERROR 0.0001  // erro minimo - threshold
 
 String path_dir = "/home/antonio/Documentos/SensoresInteligentes/Base/test/";
 
@@ -32,10 +32,10 @@ void Treina_MLP(Mat trainingDataMat, Mat labelsMat) {
     // cria a MLP com os dados da funcao de ativacao e os parametros definidos anteriormente, salvando apos o treino
     cv::Ptr<cv::ml::ANN_MLP> mlp = cv::ml::ANN_MLP::create();
     mlp->setLayerSizes(net);
-    mlp->setActivationFunction(cv::ml::ANN_MLP::ActivationFunctions::SIGMOID_SYM, 0.6, 1);
+    mlp->setActivationFunction(cv::ml::ANN_MLP::ActivationFunctions::SIGMOID_SYM, 1, 1);
     mlp->setTermCriteria(params);
-    mlp->setTrainMethod(cv::ml::ANN_MLP::TrainingMethods::BACKPROP, 0.1, 0.1);
-    //mlp->train(trainingDataMat, labelsMat, Mat(), Mat(), params);
+    mlp->setTrainMethod(cv::ml::ANN_MLP::TrainingMethods::BACKPROP, 0.0001, 0.0001);
+    mlp->train(trainingDataMat, cv::ml::ROW_SAMPLE, labelsMat);
     mlp->save("mlp.xml");
 }
 
@@ -51,25 +51,26 @@ void Treina_MLP(Mat trainingDataMat, Mat labelsMat) {
 int Testa_MLP(Mat trainingDataMat, Mat labelsMat, int index) {
     // carrega os dados treinados e testa com a base inserida
     Ptr<cv::ml::ANN_MLP> mlp = Algorithm::load<cv::ml::ANN_MLP>("mlp.xml");
-    Mat resp(N_OUTPUT, N_OUTPUT, CV_32FC1);
+    Mat resp(1, N_OUTPUT, CV_32FC1);
     mlp->predict(trainingDataMat, resp);
     
     // para treinamento em tempo real, seleciona o indice com menor erro
-    if (index < 0) {
+    //if (index < 0) {
         float min = 1.0;
         for (int i = 0; i < N_OUTPUT; i++) {
-            float erro = labelsMat.at<float>(0,i) - resp.at<float>(0,i);
-            if(erro < min) {
+            float erro = resp.at<float>(0,i) - labelsMat.at<float>(0,i);
+            cout << "Predict: " << resp.at<float>(0,i) << " Erro: " << resp.at<float>(0,i) - labelsMat.at<float>(0,i) << endl;
+            if((erro >= 0) && (erro < min)) {
                 min = erro;
                 index = i;
             }
         }
-    }
+    //}
     
     // calcula a taxa de acerto
     int errados = 0;
     int predict = 0;
-    cout << "Predict: " << resp.at<float>(0,index) << " Erro: " << labelsMat.at<float>(0,index) - resp.at<float>(0,index) << endl;
+    cout << "Predict: " << resp.at<float>(0,index) << " Erro: " << resp.at<float>(0,index) - labelsMat.at<float>(0,index) << endl;
     predict = (int)(resp.at<float>(0,index) + 0.5);
     if(predict != (int)(labelsMat.at<float>(0,index)))
         errados++;
@@ -145,11 +146,14 @@ int main(int argc, char **argv) {
             ss << k;
             String image_file = ss.str() + ".jpg";
             image = imread(path_dir + image_file, CV_LOAD_IMAGE_GRAYSCALE);
+            Mat aux;
+            image.convertTo(aux, CV_32FC1);
             for (int i = 0; i < image.rows; i++) {
                 for (int j = 0; j < image.cols; j++) {
-                    trainingDataMat.at<float>(k,i*image.cols+j) = image.at<float>(i,j)/255.0;
+                    trainingDataMat.at<float>(k,i*image.cols+j) = aux.at<float>(i,j)/255.0;
                 }
             }
+            
             labelsMat.at<float>(k,k) = 1;
         }
         
@@ -168,9 +172,11 @@ int main(int argc, char **argv) {
         cin >> index;
         cin.ignore();
         image = imread(path_dir + image_file, CV_LOAD_IMAGE_GRAYSCALE);
+        Mat aux;
+        image.convertTo(aux, CV_32FC1);
         for (int i = 0; i < image.rows; i++) {
             for (int j = 0; j < image.cols; j++) {
-                trainingDataMat.at<float>(0,i*image.cols+j) = image.at<float>(i,j)/255.0;
+                trainingDataMat.at<float>(0,i*image.cols+j) = aux.at<float>(i,j)/255.0;
             }
         }
         
