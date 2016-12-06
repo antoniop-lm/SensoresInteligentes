@@ -12,7 +12,7 @@ using namespace cv;
 #define N_HIDDEN 100     // numero de neuronios na hidden layer
 #define N_OUTPUT 15     // numero de neuronios na output layer
 #define ITERATIONS 6000 // numero maximo de iteracoes
-#define ERROR 0.0001  // erro minimo - threshold
+#define ERROR 0.00000001  // erro minimo - threshold
 
 String path_dir = "/home/antonio/Documentos/SensoresInteligentes/Base/test/";
 
@@ -58,9 +58,11 @@ int Testa_MLP(Mat trainingDataMat, Mat labelsMat, int index) {
     //if (index < 0) {
         float min = 1.0;
         for (int i = 0; i < N_OUTPUT; i++) {
-            float erro = resp.at<float>(0,i) - labelsMat.at<float>(0,i);
-            cout << "Predict: " << resp.at<float>(0,i) << " Erro: " << resp.at<float>(0,i) - labelsMat.at<float>(0,i) << endl;
-            if((erro >= 0) && (erro < min)) {
+            float erro = 1.0;
+            if (resp.at<float>(0,i) >= 0)
+                erro = labelsMat.at<float>(0,i) - resp.at<float>(0,i);
+            cout << "Predict: " << resp.at<float>(0,i) << " Erro: " << labelsMat.at<float>(0,i) - resp.at<float>(0,i) << endl;
+            if((erro >= 0) && (erro <= 1) && (erro < min)) {
                 min = erro;
                 index = i;
             }
@@ -70,11 +72,11 @@ int Testa_MLP(Mat trainingDataMat, Mat labelsMat, int index) {
     // calcula a taxa de acerto
     int errados = 0;
     int predict = 0;
-    cout << "Predict: " << resp.at<float>(0,index) << " Erro: " << resp.at<float>(0,index) - labelsMat.at<float>(0,index) << endl;
+    cout << "Predict: " << resp.at<float>(0,index) << " Erro: " << labelsMat.at<float>(0,index) - resp.at<float>(0,index) << endl;
     predict = (int)(resp.at<float>(0,index) + 0.5);
     if(predict != (int)(labelsMat.at<float>(0,index)))
         errados++;
-    cout << "Erros: " << errados << endl;
+    cout << "Erros: " << errados << " Index: " << index << endl;
     if(errados)
         return -1;
     
