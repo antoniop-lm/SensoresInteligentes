@@ -58,6 +58,7 @@ int Testa_MLP(Mat trainingDataMat, Mat labelsMat, int index) {
     if (index < 0) {
         float max = 0.0;
         for (int i = 0; i < N_OUTPUT; i++) {
+            cout << "Predict: " << resp.at<float>(0,i) << " Max: " << max << endl;
             if (resp.at<float>(0,i) >= max) {
                 max = resp.at<float>(0,i);
                 index = i;
@@ -68,7 +69,7 @@ int Testa_MLP(Mat trainingDataMat, Mat labelsMat, int index) {
     // calcula a taxa de acerto
     int errados = 0;
     int predict = 0;
-     cout << "Predict: " << resp.at<float>(0,index) << " Index: " << index << endl;
+     cout << "Predict: " << resp.at<float>(0,index) << " Index: " << index << endl << endl;
     predict = (int)(resp.at<float>(0,index) + 0.5);
     if(predict != (int)(labelsMat.at<float>(0,index)))
         errados++;
@@ -89,7 +90,7 @@ int Testa_MLP(Mat trainingDataMat, Mat labelsMat, int index) {
  * 10   11  12  13  14
  */
 void CompareResult(int actualResult, int lastResult) {
-    if (lastResult < 0 || actualResult < 0)
+    if (lastResult < 0 || actualResult < 0 || lastResult == actualResult)
         return;
     
     String movimento;
@@ -188,17 +189,15 @@ int main(int argc, char **argv) {
         VideoCapture cap(0);
         if(!cap.isOpened())
             return -1;
-        cap.set(CV_CAP_PROP_FRAME_WIDTH, 80);
-        cap.set(CV_CAP_PROP_FRAME_HEIGHT, 60);
         
         while(1) {
             Mat frame;
             cap >> frame;
             resize(frame, frame, Size(80, 60), 0, 0, INTER_CUBIC);
-            imshow("img2",frame);
             
             Mat gray;
             cvtColor(frame, gray, COLOR_BGR2GRAY);
+            imshow("img2",gray);
             for (int i = 0; i < (int) gray.rows; i++) {
                 for (int j = 0; j < (int) gray.cols; j++) {
                     trainingDataMat.at<float>(0,(i*((int)gray.cols))+j) = gray.at<float>(i,j)/255.0;   
