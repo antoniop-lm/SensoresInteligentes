@@ -14,4 +14,5 @@ for k in xrange(15):
     image_file = str(k) + ".jpg"
     image = misc.imread(path_dir + image_file, flatten=1)
     new_image_file = path_dir + 'test/' + image_file
-    misc.imsave(new_image_file, image)
+    image2 = misc.imresize(image,(60,80),interp='cubic')
+    misc.imsave(new_image_file, image2)

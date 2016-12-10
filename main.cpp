@@ -8,11 +8,11 @@
 using namespace std;
 using namespace cv;
 
-#define N_INPUT 307200  // numero de neuronios na input layer
-#define N_HIDDEN 100     // numero de neuronios na hidden layer
+#define N_INPUT 4800  // numero de neuronios na input layer
+#define N_HIDDEN 40     // numero de neuronios na hidden layer
 #define N_OUTPUT 15     // numero de neuronios na output layer
 #define ITERATIONS 6000 // numero maximo de iteracoes
-#define ERROR 0.00000001  // erro minimo - threshold
+#define ERROR 0.000000000001  // erro minimo - threshold
 
 String path_dir = "/home/antonio/Documentos/SensoresInteligentes/Base/test/";
 
@@ -55,30 +55,26 @@ int Testa_MLP(Mat trainingDataMat, Mat labelsMat, int index) {
     mlp->predict(trainingDataMat, resp);
     
     // para treinamento em tempo real, seleciona o indice com menor erro
-    //if (index < 0) {
-        float min = 1.0;
+    if (index < 0) {
+        float max = 0.0;
         for (int i = 0; i < N_OUTPUT; i++) {
-            float erro = 1.0;
-            if (resp.at<float>(0,i) >= 0)
-                erro = labelsMat.at<float>(0,i) - resp.at<float>(0,i);
-            cout << "Predict: " << resp.at<float>(0,i) << " Erro: " << labelsMat.at<float>(0,i) - resp.at<float>(0,i) << endl;
-            if((erro >= 0) && (erro <= 1) && (erro < min)) {
-                min = erro;
+            if (resp.at<float>(0,i) >= max) {
+                max = resp.at<float>(0,i);
                 index = i;
             }
         }
-    //}
+    }
     
     // calcula a taxa de acerto
     int errados = 0;
     int predict = 0;
-    cout << "Predict: " << resp.at<float>(0,index) << " Erro: " << labelsMat.at<float>(0,index) - resp.at<float>(0,index) << endl;
+     cout << "Predict: " << resp.at<float>(0,index) << " Index: " << index << endl;
     predict = (int)(resp.at<float>(0,index) + 0.5);
     if(predict != (int)(labelsMat.at<float>(0,index)))
         errados++;
-    cout << "Erros: " << errados << " Index: " << index << endl;
-    if(errados)
-        return -1;
+//     cout << "Erros: " << errados << " Index: " << index << endl;
+//     if(errados)
+//         return -1;
     
     return index;
 }
@@ -192,17 +188,20 @@ int main(int argc, char **argv) {
         VideoCapture cap(0);
         if(!cap.isOpened())
             return -1;
+        cap.set(CV_CAP_PROP_FRAME_WIDTH, 80);
+        cap.set(CV_CAP_PROP_FRAME_HEIGHT, 60);
         
         while(1) {
             Mat frame;
             cap >> frame;
+            resize(frame, frame, Size(80, 60), 0, 0, INTER_CUBIC);
             imshow("img2",frame);
             
             Mat gray;
             cvtColor(frame, gray, COLOR_BGR2GRAY);
-            for (int i = 0; i < (int) cap.get(CV_CAP_PROP_FRAME_HEIGHT); i++) {
-                for (int j = 0; j < (int) cap.get(CV_CAP_PROP_FRAME_WIDTH); j++) {
-                    trainingDataMat.at<float>(0,(i*((int)cap.get(CV_CAP_PROP_FRAME_WIDTH)))+j) = frame.at<float>(i,j)/255.0;   
+            for (int i = 0; i < (int) frame.rows; i++) {
+                for (int j = 0; j < (int) frame.cols; j++) {
+                    trainingDataMat.at<float>(0,(i*((int)frame.cols))+j) = frame.at<float>(i,j)/255.0;   
                 }
             }
             
