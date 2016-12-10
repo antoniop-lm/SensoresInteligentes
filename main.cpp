@@ -199,9 +199,9 @@ int main(int argc, char **argv) {
             
             Mat gray;
             cvtColor(frame, gray, COLOR_BGR2GRAY);
-            for (int i = 0; i < (int) frame.rows; i++) {
-                for (int j = 0; j < (int) frame.cols; j++) {
-                    trainingDataMat.at<float>(0,(i*((int)frame.cols))+j) = frame.at<float>(i,j)/255.0;   
+            for (int i = 0; i < (int) gray.rows; i++) {
+                for (int j = 0; j < (int) gray.cols; j++) {
+                    trainingDataMat.at<float>(0,(i*((int)gray.cols))+j) = gray.at<float>(i,j)/255.0;   
                 }
             }
             
